@@ -14,14 +14,14 @@ class DalyBMS(Node):
         self._last_discharge_value = 3.0
 
     def ros_read_params(self):
-        self.declare_parameter("~serial_port", "/dev/ttyUSB0")
-        if self.get_parameter("~serial_port").value == None:
+        self.declare_parameter("daly_serial_port", "/dev/ttyUSB0")
+        if self.get_parameter("daly_serial_port").value == None:
             self.get_logger().warn(
                 "No serial port provided, using default: /dev/ttyUSB0"
             )
             self._port = "/dev/ttyUSB0"
         else:
-            self._port = self.get_parameter("~serial_port").value
+            self._port = self.get_parameter("daly_serial_port").value
 
     def ros_init(self):
         self._battery_status_pub = self.create_publisher(BatteryStatus, "~/data", 10)

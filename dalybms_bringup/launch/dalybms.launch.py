@@ -25,7 +25,7 @@ def generate_launch_description():
         package="dalybms_hardware",
         executable="dalybms_hardware",
         name="battery",
-        parameters=[{"serial_port": serial_port}],
+        parameters=[{"daly_serial_port": serial_port}],
     )
 
     return LaunchDescription(declared_arguments + [dalybms_hardware_node])
