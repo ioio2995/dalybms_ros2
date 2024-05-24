@@ -96,7 +96,7 @@ class DalyBMS(Node):
 def main(args=None):
     rclpy.init(args=args)
     daly_bms = DalyBMS()
-    daly_bms.get_logger().info(f"Starting Daly BMS Node{ daly_bms.get_name() }")
+    daly_bms.get_logger().info(f"Starting Daly BMS Node { daly_bms.get_name() }")
     daly_bms.bms_init()
     rclpy.spin(daly_bms)
     daly_bms.destroy_node()
