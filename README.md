@@ -16,42 +16,36 @@ This project provides tools to integrate a Daly Battery Management System (BMS) 
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ioio2995/dalybms_ros2.git
-   cd dalybms_ros2
-   ```
-
-2. Create a ROS 2 workspace and navigate into it:
+1. Create a ROS 2 workspace and navigate into it:
    ```bash
    mkdir -p ~/ros2_ws/src
    cd ~/ros2_ws/src
    ```
 
-3. Clone the repository into the workspace:
+2. Clone the repository into the workspace:
    ```bash
    git clone https://github.com/ioio2995/dalybms_ros2.git
    cd ..
    ```
 
-4. Install dependencies:
+3. Install dependencies:
    ```bash
    sudo apt update
    rosdep update
    rosdep install --from-paths src --ignore-src -r -y
    ```
 
-5. Install Python dependencies:
+4. Install Python dependencies:
    ```bash
    pip install -r src/dalybms_ros2/requirements.txt
    ```
 
-6. Build the workspace:
+5. Build the workspace:
    ```bash
    colcon build
    ```
 
-7. Source the setup script:
+6. Source the setup script:
    ```bash
    source install/setup.bash
    ```
