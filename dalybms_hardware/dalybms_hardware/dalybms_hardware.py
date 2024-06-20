@@ -12,26 +12,30 @@ class DalyBMS(Node):
         self._last_battery_state = "Unknown"
         self._time_init_charging = self.get_clock().now()
         self._last_discharge_value = 3.0
+        self.bms_init()
 
     def ros_read_params(self):
         self.declare_parameter("daly_serial_port", "/dev/ttyUSB0")
-        if self.get_parameter("daly_serial_port").value == None:
+        self._port = self.get_parameter("daly_serial_port").get_parameter_value().string_value
+        if not self._port:
             self.get_logger().warn(
                 "No serial port provided, using default: /dev/ttyUSB0"
             )
             self._port = "/dev/ttyUSB0"
-        else:
-            self._port = self.get_parameter("daly_serial_port").value
 
     def ros_init(self):
         self._battery_status_pub = self.create_publisher(BatteryStatus, "~/data", 10)
-        timer_period: float = 1  # seconds
+        timer_period = 1.0  # seconds
         self._reading_timer = self.create_timer(timer_period, self.read)
         self._publishing_timer = self.create_timer(timer_period, self.publish)
 
     def bms_init(self):
         self.ros_read_params()
-        self._driver.connect(self._port)
+        try:
+            self._driver.connect(self._port)
+        except Exception as e:
+            self.get_logger().error(f"Failed to connect to BMS: {e}")
+            return
         self.ros_init()
 
     def read(self):
@@ -39,13 +43,11 @@ class DalyBMS(Node):
             soc_data = self._driver.get_soc()
             mosfet_data = self._driver.get_mosfet_status()
             cells_data = self._driver.get_cell_voltages()
-        except:
-            self.get_logger().warn(
-                "Skipping current read cycle: Driver failed to return data"
-            )
+        except Exception as e:
+            self.get_logger().warn(f"Skipping current read cycle: {e}")
             return
 
-        if soc_data == False or mosfet_data == False or cells_data == False:
+        if not soc_data or not mosfet_data or not cells_data:
             self.get_logger().warn(
                 "Skipping current read cycle: Driver failed to return data"
             )
@@ -59,33 +61,27 @@ class DalyBMS(Node):
             self._battery_status.is_charging = False
             self._battery_status.time_charging = 0
             self._last_discharge_value = self._battery_status.current
-
-        elif mosfet_data["mode"] == "charging" or mosfet_data["mode"] == "stationary":
-            if (
-                self._last_battery_state == "Unknown"
-                or self._last_battery_state == "discharging"
-            ):
-                self._time_init_charging = self.get_clock().now().to_msg().sec
+        elif mosfet_data["mode"] in ["charging", "stationary"]:
+            if self._last_battery_state in ["Unknown", "discharging"]:
+                self._time_init_charging = self.get_clock().now()
 
             self._battery_status.is_charging = True
             elapsed_time = (
-                self.get_clock().now().to_msg().sec - self._time_init_charging
-            ) / 60
-            elapsed_time = int(elapsed_time)
-
-            self._battery_status.time_charging = elapsed_time
+                self.get_clock().now() - self._time_init_charging
+            ).nanoseconds / 1e9 / 60  # convert to minutes
+            self._battery_status.time_charging = int(elapsed_time)
 
         # _last_discharge_value is negative in certain cases
         if self._last_discharge_value != 0:
             remaining_hours = round(
-                mosfet_data["capacity_ah"] / self._last_discharge_value, 0
+                mosfet_data["capacity_ah"] / abs(self._last_discharge_value), 0
             )
         else:
             remaining_hours = 0
 
         self._battery_status.time_remaining = max(
             0, int(remaining_hours) * 60
-        )  # remaining_hours is negative in certain cases
+        )  # convert hours to minutes
         self._last_battery_state = mosfet_data["mode"]
 
         self._battery_status.cell_voltages = list(cells_data.values())
@@ -96,12 +92,10 @@ class DalyBMS(Node):
 def main(args=None):
     rclpy.init(args=args)
     daly_bms = DalyBMS()
-    daly_bms.get_logger().info(f"Starting Daly BMS Node { daly_bms.get_name() }")
-    daly_bms.bms_init()
+    daly_bms.get_logger().info(f"Starting Daly BMS Node {daly_bms.get_name()}")
     rclpy.spin(daly_bms)
     daly_bms.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()
